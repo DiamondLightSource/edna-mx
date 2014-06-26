@@ -154,7 +154,7 @@ class EDPluginExecSimpleHTMLPagev1_0(EDPluginExec):
             self.page.td.close()
             # Thumbnail images
             self.page.td()
-            self.createThumbnailRowOfImages()
+            self.createThumbnailRowOfIndexingImages()
             self.page.td.close()
             self.page.tr.close()
             self.page.table.close()
@@ -473,7 +473,56 @@ class EDPluginExecSimpleHTMLPagev1_0(EDPluginExec):
         xsDataResultStrategy = self.xsDataResultCharacterisation.getStrategyResult()
         
 
-    def createThumbnailRowOfImages(self):
+    def createThumbnailRowOfReferenceImages(self):
+        # Thumbnail images of the reference images
+        self.page.div(align_="left")
+        self.page.table( class_='imageRow' )
+        self.page.tr( align_="CENTER" )
+        for xsDataSubWedge in self.xsDataResultCharacterisation.dataCollection.subWedge:
+            for xsDataImage in xsDataSubWedge.image:
+                strReferenceImageName = os.path.basename(xsDataImage.path.value)
+                listJpegImage = self.xsDataResultCharacterisation.jpegImage
+                for xsDataImageJpeg in listJpegImage:
+                    if xsDataImageJpeg.number.value == xsDataImage.number.value:
+                        strPathToJpegImage = xsDataImageJpeg.path.value
+                        strJpegFileName = os.path.basename(strPathToJpegImage)
+                        shutil.copyfile(strPathToJpegImage, os.path.join(self.getWorkingDirectory(), strJpegFileName))
+                listThumbnailImage = self.xsDataResultCharacterisation.thumbnailImage
+                for xsDataThumbnailImage in listThumbnailImage:
+                    if xsDataThumbnailImage.number.value == xsDataImage.number.value:
+                        strPathToThumbnailImage = xsDataThumbnailImage.path.value
+                        strThumbnailFileName = os.path.basename(strPathToThumbnailImage)
+                        shutil.copyfile(strPathToThumbnailImage, os.path.join(self.getWorkingDirectory(), strThumbnailFileName))
+                        break
+                self.page.td()
+                self.page.table( class_='image' )
+                self.page.tr( align_="CENTER" )
+                self.page.td()
+                strPageReferenceImage = os.path.splitext(strReferenceImageName)[0]+".html"
+                pageReferenceImage = markupv1_7.page()
+                pageReferenceImage.init( title=strReferenceImageName, 
+                       footer="Generated on %s" % time.asctime())
+                pageReferenceImage.h1(strReferenceImageName)
+                pageReferenceImage.a("Back to previous page", href_=self.strHtmlFileName)
+                pageReferenceImage.img(src=strJpegFileName, title=strJpegFileName)
+                pageReferenceImage.a("Back to previous page", href_=self.strHtmlFileName)
+                EDUtilsFile.writeFile(os.path.join(self.getWorkingDirectory(),strPageReferenceImage), str(pageReferenceImage))
+                self.page.a( href=strPageReferenceImage)
+                self.page.img( src=strThumbnailFileName, width=256, height=256, title=strReferenceImageName )
+                self.page.a.close()
+                self.page.td.close()
+                self.page.tr.close()
+                self.page.tr( align_="CENTER" )
+                self.page.td( strReferenceImageName, class_="caption")
+                self.page.td.close()
+                self.page.tr.close()
+                self.page.table.close()
+                self.page.td.close()
+        self.page.table.close()
+        self.page.div.close()
+
+
+    def createThumbnailRowOfIndexingImages(self):
         # Thumbnail images of the predictions
         xsDataResultIndexing = self.xsDataResultCharacterisation.indexingResult
         listThumbnailImage = self.xsDataResultCharacterisation.thumbnailImage
@@ -481,97 +530,56 @@ class EDPluginExecSimpleHTMLPagev1_0(EDPluginExec):
         self.page.div(align_="left")
         self.page.table( class_='imageRow' )
         self.page.tr( align_="CENTER" )
-        if xsDataResultIndexing is None:
-            for xsDataSubWedge in self.xsDataResultCharacterisation.dataCollection.subWedge:
-                for xsDataImage in xsDataSubWedge.image:
-                    strReferenceImageName = os.path.basename(xsDataImage.path.value)
-                    listJpegImage = self.xsDataResultCharacterisation.jpegImage
-                    for xsDataImageJpeg in listJpegImage:
-                        if xsDataImageJpeg.number.value == xsDataImage.number.value:
-                            strPathToJpegImage = xsDataImageJpeg.path.value
-                            strJpegFileName = os.path.basename(strPathToJpegImage)
-                            shutil.copyfile(strPathToJpegImage, os.path.join(self.getWorkingDirectory(), strJpegFileName))
-                    for xsDataThumbnailImage in listThumbnailImage:
-                        if xsDataThumbnailImage.number.value == xsDataImage.number.value:
-                            strPathToThumbnailImage = xsDataThumbnailImage.path.value
-                            strThumbnailFileName = os.path.basename(strPathToThumbnailImage)
-                            shutil.copyfile(strPathToThumbnailImage, os.path.join(self.getWorkingDirectory(), strThumbnailFileName))
-                            break
-                    self.page.td()
+        for xsDataSubWedge in self.xsDataResultCharacterisation.dataCollection.subWedge:
+            for xsDataImage in xsDataSubWedge.image:
+                xsDataResultPrediction = xsDataResultIndexing.predictionResult
+                listXSDataReferenceImage = xsDataResultIndexing.image
+                for xsDataImagePrediction in xsDataResultPrediction.predictionImage:
+                    if xsDataImagePrediction.number.value == xsDataImage.number.value:
+                        strPathToPredictionImage = xsDataImagePrediction.path.value
+                        strFileName = os.path.basename(strPathToPredictionImage)
+                        break
+                strReferenceFileName = None
+                for xsDataReferenceImage in listXSDataReferenceImage:
+                    if xsDataReferenceImage.number.value == xsDataImage.number.value:
+                        strReferenceFileName = os.path.basename(xsDataReferenceImage.path.value)
+                if strReferenceFileName is None:
+                    strReferenceFileName = strFileName
+                strLocalPath = os.path.join(self.getWorkingDirectory(), strFileName)
+                self.page.td()
+                if os.path.exists(strPathToPredictionImage):
+                    shutil.copyfile(strPathToPredictionImage, strLocalPath)
+                    listPaths.append(strLocalPath)
                     self.page.table( class_='image' )
                     self.page.tr( align_="CENTER" )
                     self.page.td()
-                    strPageReferenceImage = os.path.splitext(strReferenceImageName)[0]+".html"
+                    strPageReferenceImage = os.path.splitext(strFileName)[0]+".html"
                     pageReferenceImage = markupv1_7.page()
-                    pageReferenceImage.init( title=strReferenceImageName, 
+                    pageReferenceImage.init( title=strReferenceFileName, 
                            footer="Generated on %s" % time.asctime())
-                    pageReferenceImage.h1(strReferenceImageName)
+                    pageReferenceImage.h1(strReferenceFileName)
                     pageReferenceImage.a("Back to previous page", href_=self.strHtmlFileName)
-                    pageReferenceImage.img(src=strJpegFileName, title=strJpegFileName)
+                    pageReferenceImage.img(src=strFileName, title=strReferenceFileName)
                     pageReferenceImage.a("Back to previous page", href_=self.strHtmlFileName)
                     EDUtilsFile.writeFile(os.path.join(self.getWorkingDirectory(),strPageReferenceImage), str(pageReferenceImage))
+                    strThumbnailFileName = os.path.splitext(strFileName)[0]+".thumbnail.jpg"
+                    size = [128, 128]
+                    im = Image.open(strLocalPath)
+                    im.thumbnail(size, Image.ANTIALIAS)
+                    im.save(os.path.join(self.getWorkingDirectory(), strThumbnailFileName), "JPEG")
                     self.page.a( href=strPageReferenceImage)
-                    self.page.img( src=strThumbnailFileName, width=256, height=256, title=strReferenceImageName )
+                    self.page.img( src=strThumbnailFileName, title=strFileName )
                     self.page.a.close()
                     self.page.td.close()
                     self.page.tr.close()
                     self.page.tr( align_="CENTER" )
-                    self.page.td( strReferenceImageName, class_="caption")
+                    self.page.td( "Spot predictions<br>%s" % strReferenceFileName, class_="caption")
                     self.page.td.close()
                     self.page.tr.close()
                     self.page.table.close()
                     self.page.td.close()
-        else:
-            for xsDataSubWedge in self.xsDataResultCharacterisation.dataCollection.subWedge:
-                for xsDataImage in xsDataSubWedge.image:
-                    xsDataResultPrediction = xsDataResultIndexing.predictionResult
-                    listXSDataReferenceImage = xsDataResultIndexing.image
-                    for xsDataImagePrediction in xsDataResultPrediction.predictionImage:
-                        if xsDataImagePrediction.number.value == xsDataImage.number.value:
-                            strPathToPredictionImage = xsDataImagePrediction.path.value
-                            strFileName = os.path.basename(strPathToPredictionImage)
-                            break
-                    strReferenceFileName = None
-                    for xsDataReferenceImage in listXSDataReferenceImage:
-                        if xsDataReferenceImage.number.value == xsDataImage.number.value:
-                            strReferenceFileName = os.path.basename(xsDataReferenceImage.path.value)
-                    for xsDataThumbnailImage in listThumbnailImage:
-                        if xsDataThumbnailImage.number.value == xsDataImage.number.value:
-                            strPathToThumbnailImage = xsDataThumbnailImage.path.value
-                            strThumbnailFileName = os.path.basename(strPathToThumbnailImage)
-                            shutil.copyfile(strPathToThumbnailImage, os.path.join(self.getWorkingDirectory(), strThumbnailFileName))
-                    if strReferenceFileName is None:
-                        strReferenceFileName = strFileName
-                    strLocalPath = os.path.join(self.getWorkingDirectory(), strFileName)
-                    self.page.td()
-                    if os.path.exists(strPathToPredictionImage):
-                        shutil.copyfile(strPathToPredictionImage, strLocalPath)
-                        listPaths.append(strLocalPath)
-                        self.page.table( class_='image' )
-                        self.page.tr( align_="CENTER" )
-                        self.page.td()
-                        strPageReferenceImage = os.path.splitext(strFileName)[0]+".html"
-                        pageReferenceImage = markupv1_7.page()
-                        pageReferenceImage.init( title=strReferenceFileName, 
-                               footer="Generated on %s" % time.asctime())
-                        pageReferenceImage.h1(strReferenceFileName)
-                        pageReferenceImage.a("Back to previous page", href_=self.strHtmlFileName)
-                        pageReferenceImage.img(src=strFileName, title=strReferenceFileName)
-                        pageReferenceImage.a("Back to previous page", href_=self.strHtmlFileName)
-                        EDUtilsFile.writeFile(os.path.join(self.getWorkingDirectory(),strPageReferenceImage), str(pageReferenceImage))
-                        self.page.a( href=strPageReferenceImage)
-                        self.page.img( src=strThumbnailFileName, width=256, height=256, title=strFileName )
-                        self.page.a.close()
-                        self.page.td.close()
-                        self.page.tr.close()
-                        self.page.tr( align_="CENTER" )
-                        self.page.td( strReferenceFileName, class_="caption")
-                        self.page.td.close()
-                        self.page.tr.close()
-                        self.page.table.close()
-                        self.page.td.close()
-            self.page.table.close()
-            self.page.div.close()
+        self.page.table.close()
+        self.page.div.close()
 
 
     def createTableWithIndexResults(self, _xsDataResultIndexing, _strForcedSpaceGroup):
@@ -628,6 +636,7 @@ class EDPluginExecSimpleHTMLPagev1_0(EDPluginExec):
             if xsDataResultImageQualityIndicators.dozor_score is not None:
                 bDozor = True
         self.page.h3("Image quality indicators")
+        self.createThumbnailRowOfReferenceImages()
         self.page.table( class_='imageQualityIndicatorResults', border_="1", cellpadding_="0")
         self.page.tr( align_="CENTER", bgcolor_=self.strTableColourTitle2  )
         self.page.th("File")
@@ -674,13 +683,13 @@ class EDPluginExecSimpleHTMLPagev1_0(EDPluginExec):
         self.page.table.close()
         # Some info about Dozor and Labelit
         if bDozor:
-            self.page.strong("1. Dozor score: criteria of diffractuion signal strength that uses intensities over background vs resolution. Popov 2014, to be published.")
+            self.page.strong("1. Dozor score: criteria of diffraction signal strength that uses intensities over background vs resolution. Popov 2014, to be published.")
             self.page.br()
-            self.page.strong("2. Total integrated signal, spot total etc: Results from ")
+            self.page.strong("2. Total integrated signal, spot total etc: results from ")
             self.page.a("cctbx Spotfinder", href="http://cci.lbl.gov/publications/download/ccn_jul2010_page18.pdf")
             self.page.br()
         else:
-            self.page.strong("1. Total integrated signal, spot total etc: Results from ")
+            self.page.strong("1. Total integrated signal, spot total etc: results from ")
             self.page.a("cctbx Spotfinder", href="http://cci.lbl.gov/publications/download/ccn_jul2010_page18.pdf")
             self.page.br()
 
