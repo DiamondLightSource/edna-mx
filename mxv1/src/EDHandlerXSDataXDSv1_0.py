@@ -352,8 +352,8 @@ class EDHandlerXSDataXDSv1_0:
             pyStrErrorMessage = "EDHandlerXSDataXDSv1_0.getXSDataXDSDetector: Unknown detector type : " + strDetectorType
             raise Exception, pyStrErrorMessage
 
-        xsDataXDSDetector.setNx(_xsDataDetector.getNumberPixelX())
-        xsDataXDSDetector.setNy(_xsDataDetector.getNumberPixelY())
+        xsDataXDSDetector.setNx(_xsDataDetector.getNumberPixelY())
+        xsDataXDSDetector.setNy(_xsDataDetector.getNumberPixelX())
         xsDataXDSDetector.setQx(_xsDataDetector.getPixelSizeX())
         xsDataXDSDetector.setQy(_xsDataDetector.getPixelSizeY())
         xsDataXDSDetector.setDetector_distance(_xsDataDetector.getDistance())
